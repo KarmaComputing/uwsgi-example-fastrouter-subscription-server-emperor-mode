@@ -105,6 +105,11 @@ so that the fastrouter knows to route to them.
 The apache web server (proxying to fastrouter + subscription server) is the SPOF in this architecture (unless using somthing like CARP/VRRP), however it does have the operational benefit of being able to turn off / add/remove nodes at any point (e.g. for upgrade/patching).
 
 
+### The worker node(s) have a simpler master uwsgi config
+
+All the worker nodes need to do are announce the apps to
+the subscription server. Worker nodes do not need to run fastrouter or subscription server features.
+
 `run.sh` on a worker node:
 ```
 #!/bin/bash
@@ -146,8 +151,22 @@ Contents of vassals/app1/config.ini:
 [uwsgi]
 strict = true
 
+# Use random port 
 # See: https://uwsgi-docs.readthedocs.io/en/latest/Fastrouter.html#way-4-fastrouter-subscription-server 
-socket = :3031
+
+# If the worker node only has one network interface,
+# then you may be OK to use `socket = :0`
+# The `0` means uwsgi will automatically choose a port
+# to bind to.
+#socket = :0
+
+# Otherwise, specify the worker nodes ip address, so then
+# then it announces itself to the subscription server, the
+# ip src address is correctly registerd by uwsgi's
+# subscription server so that it may send traffic to it
+# The `0` means uwsgi will automatically choose a port
+# to bind to.
+socket = 192.168.1.73:0
 
 # Announce this app to the subscription server (so that
 # fastrouter can route to this app)
@@ -161,6 +180,7 @@ wsgi-file = %d/app.py
 
 # Set the current working direcotry for the app
 chdir = %d
+
 ```
 
 
