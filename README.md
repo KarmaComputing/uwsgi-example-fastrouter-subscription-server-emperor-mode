@@ -15,7 +15,7 @@ python3 -m venv venv
 pip install -r requirements.txt
 
 # setup vassal app
-cd ./vassals/
+cd ./vassals/app1 # do the same for app2
 python3 -m venv venv
 . venv/bin/activate
 pip install -r requirements.txt
@@ -76,4 +76,19 @@ hello world
 real	0m0.017s
 user	0m0.008s
 sys	0m0.008s
+```
+
+# Smoke test
+
+1. Edit your /etc/hosts file to have
+   127.0.0.1 example.com
+   127.0.0.1 app2.example.com
+   # app3 etc..
+2. Configure apache
+3. Start uwsgi master (run.sh)
+3. curl your app(s)
+
+```
+time curl -v http://example.com.com
+time curl -v http://app2.example.com # etc
 ```
