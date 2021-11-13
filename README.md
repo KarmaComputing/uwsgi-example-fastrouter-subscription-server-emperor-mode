@@ -92,3 +92,84 @@ sys	0m0.008s
 time curl -v http://example.com.com
 time curl -v http://app2.example.com # etc
 ```
+
+## Add a seccond / third / n worker nodes
+
+"Worker node"? == A server which *only* has uwsgi managed 
+apps, it does **not** run a subscription server or fastrouter (there is only one of these).
+
+You can add as many additional servers as desired, and
+they can automatically subscribe to the subscription server
+so that the fastrouter knows to route to them.
+
+The apache web server (proxying to fastrouter + subscription server) is the SPOF in this architecture (unless using somthing like CARP/VRRP), however it does have the operational benefit of being able to turn off / add/remove nodes at any point (e.g. for upgrade/patching).
+
+
+`run.sh` on a worker node:
+```
+#!/bin/bash
+
+set -x
+
+uwsgi --emperor ./vassals/*/*.ini
+```
+
+With each app running within a `vassals` subdirectory.
+Note: Vassals can (and do in this repo) run on the subscription server node too.
+
+Example worker node directory layout:
+```
+~# tree vassals/
+vassals/
+└── app1
+    ├── app.py
+    └── config.ini
+```
+
+Contents of vassals/app1/app.py
+```
+def application(env, start_response):
+    """
+    A miniman WSGI application
+    """
+
+    http_status = '200 OK'
+    response_headers = [('Content-Type', 'text/html')]
+    response_text = b"Hello from app1\n"
+
+    start_response(http_status, response_headers)
+    return [response_text]
+```
+
+Contents of vassals/app1/config.ini:
+```
+[uwsgi]
+strict = true
+
+# See: https://uwsgi-docs.readthedocs.io/en/latest/Fastrouter.html#way-4-fastrouter-subscription-server 
+socket = :3031
+
+# Announce this app to the subscription server (so that
+# fastrouter can route to this app)
+subscribe-to = 10.0.2.2:7000:example.com
+
+# Activate the virtual environment for this app
+#virtualenv = %d/venv
+
+# Tell uwsgi where the wsgi app is
+wsgi-file = %d/app.py
+
+# Set the current working direcotry for the app
+chdir = %d
+```
+
+
+
+## Debugging
+
+```
+uwsgi --socket :0 --subscribe-to 127.0.0.1:7000:example.com \
+  --virtualenv /home/chris/Documents/programming/python/uwsgi/fastrouter/vassals/venv \
+  --wsgi-file /home/chris/Documents/programming/python/uwsgi/fastrouter/vassals/app.wsgi \
+  --chdir /home/chris/Documents/programming/python/uwsgi/fastrouter/vassals
+```
