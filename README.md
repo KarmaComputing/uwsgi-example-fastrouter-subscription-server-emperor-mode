@@ -1,4 +1,8 @@
-# uwsgi fastrouter with subscription server example
+# uwsgi fastrouter with subscription server and emperor example
+
+- fastrouter - routing (speaks **uwsgi** protocol, not http (so you need `mod_proxy_uwsgi`))
+- subscription server - so that apps can accounce themselves to 
+- emperor - tell uwsgi to scan a directory of config files for each uwsgi-managed app (each app has one config file)
 
 minimal viable run example of uwsgi fastrouter with
 subscription server. 
@@ -9,20 +13,24 @@ subscription server.
 python3 -m venv venv
 . venv/bin/activate
 pip install -r requirements.txt
+
+# setup vassal app
+cd ./vassals/
+python3 -m venv venv
+. venv/bin/activate
+pip install -r requirements.txt
+cd ../
 ```
 
-Start the fast router with subscription server
+Start the fast router with subscription server, which looks in the 'vassals' directory for
+apps to start.
 ```
-./run
+./run.sh
 ```
 
 Start an instance subscribing to the subscription server
 on a random port (so you don't need to manually assign ports). [Read](https://uwsgi-docs.readthedocs.io/en/latest/Fastrouter.html#way-4-fastrouter-subscription-server)
 
-```
-. venv/bin/activate
-uwsgi --socket :0 --subscribe-to 127.0.0.1:7000:example.com
-```
 
 ## Example apache config
 ```
