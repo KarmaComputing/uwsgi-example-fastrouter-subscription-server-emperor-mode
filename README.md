@@ -107,15 +107,17 @@ sys	0m0.008s
 # Smoke test
 
 1. Edit your /etc/hosts file to have
+   ```
    127.0.0.1 example.com
    127.0.0.1 app2.example.com
    # app3 etc..
+   ```
 2. Configure apache
 3. Start uwsgi on main node and worker node(s)
   ```
   systemctl start uwsgi
   ```
-3. curl your app(s)
+4. curl your app(s)
 
 ```
 time curl -v http://example.com.com
@@ -124,7 +126,8 @@ time curl -v http://app2.example.com # etc
 
 ## Add a seccond / third / n worker nodes
 
-"Worker node"? == A server which *only* has uwsgi managed 
+> What is a "worker node"? 
+  A server which *only* has uwsgi managed 
 apps, it does **not** run a subscription server or fastrouter (there is only one of these).
 
 You can add as many additional servers as desired, and
