@@ -3,6 +3,7 @@
 - fastrouter - routing (speaks **uwsgi** protocol, not http (so you need `mod_proxy_uwsgi`))
 - subscription server - so that apps can accounce themselves to 
 - emperor - tell uwsgi to scan a directory of config files for each uwsgi-managed app (each app has one config file)
+- Automatic port assignment of apps
 
 minimal viable run example of uwsgi fastrouter with
 subscription server. 
@@ -110,7 +111,7 @@ The apache web server (proxying to fastrouter + subscription server) is the SPOF
 All the worker nodes need to do are announce the apps to
 the subscription server. Worker nodes do not need to run fastrouter or subscription server features.
 
-`run.sh` on a worker node:
+`/etc/uwsgi/emperor.ini` on a worker node:
 ```
 #!/bin/bash
 
@@ -118,6 +119,35 @@ set -x
 
 uwsgi --emperor ./vassals/*/*.ini
 ```
+
+#### Systemd config for worker node(s)
+
+Start the uwsgi worker service
+
+`systemctl start uwsgi`
+
+Example systemd config file: [docs](https://uwsgi-docs.readthedocs.io/en/latest/Systemd.html#adding-the-emperor-to-systemd)
+`/etc/systemd/system/uwsgi.service`
+```
+[Unit]
+Description=uWSGI Emperor worker node
+After=syslog.target
+
+[Service]
+ExecStart=/usr/local/bin/uwsgi --ini /etc/uwsgi/emperor.ini
+# Requires systemd version 211 or newer
+RuntimeDirectory=uwsgi
+Restart=always
+KillSignal=SIGQUIT
+Type=notify
+StandardError=syslog
+NotifyAccess=all
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### Vassal configs and directory layout
 
 With each app running within a `vassals` subdirectory.
 Note: Vassals can (and do in this repo) run on the subscription server node too.
@@ -186,6 +216,15 @@ chdir = %d
 
 
 ## Debugging
+
+Watch the logs of the uwsgi service
+
+```
+journalctl -fu uwsgi
+```
+Where `f` means follow, and `u` is the systemd unit name.
+
+Start something manually:
 
 ```
 uwsgi --socket :0 --subscribe-to 127.0.0.1:7000:example.com \
