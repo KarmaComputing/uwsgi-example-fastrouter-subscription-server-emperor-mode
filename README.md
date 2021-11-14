@@ -50,6 +50,31 @@ on a random port (so you don't need to manually assign ports). [Read](https://uw
 # vim: syntax=apache ts=4 sw=4 sts=4 sr noet
 ```
 
+## uwsgi main node systemd
+Start the uwsgi main service
+
+`systemctl start uwsgi`
+
+`/etc/systemd/system/uwsgi.service`
+```
+[Unit]
+Description=uWSGI Emperor main node
+After=syslog.target
+
+[Service]
+ExecStart=/usr/local/bin/uwsgi --ini /etc/uwsgi/emperor.ini
+# Requires systemd version 211 or newer
+RuntimeDirectory=uwsgi
+Restart=always
+KillSignal=SIGQUIT
+Type=notify
+StandardError=syslog
+NotifyAccess=all
+
+[Install]
+WantedBy=multi-user.target
+```
+
 ### Curl the app
 
 ```
@@ -86,7 +111,10 @@ sys	0m0.008s
    127.0.0.1 app2.example.com
    # app3 etc..
 2. Configure apache
-3. Start uwsgi master (run.sh)
+3. Start uwsgi on main node and worker node(s)
+  ```
+  systemctl start uwsgi
+  ```
 3. curl your app(s)
 
 ```
@@ -106,7 +134,22 @@ so that the fastrouter knows to route to them.
 The apache web server (proxying to fastrouter + subscription server) is the SPOF in this architecture (unless using somthing like CARP/VRRP), however it does have the operational benefit of being able to turn off / add/remove nodes at any point (e.g. for upgrade/patching).
 
 
-### The worker node(s) have a simpler master uwsgi config
+> There is a virtual machine in this repo to quicky create
+  a worker node. It's defined using `Vagrant`, to start a 
+  worker node, install virtualbox, then install [vagrant](https://www.vagrantup.com/docs/installation). To start the vm run `vagrant up` from the `vagrant/uwsgi-worker` directory in this repo.
+
+1. Install virtualbox and vagrant
+2. `vagrant ssh` # to go inside the worker
+3. Become root `sudo -i`
+4. Get the ip address of the vm: `ip -4 addr`
+5. Update vassal(s) config to the ip address of the vm
+   `vi /etc/uwsgi/vassals/app1/config.ini` and update the
+   `socket = ` value to to the ip of the vm.
+   e.g. `socker = 192.168.1.203:0` (where `0` means auto
+   choose port.
+
+
+### The worker node(s) have a simpler main uwsgi config
 
 All the worker nodes need to do are announce the apps to
 the subscription server. Worker nodes do not need to run fastrouter or subscription server features.
